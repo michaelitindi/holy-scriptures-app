@@ -58,6 +58,18 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
       },
+      fontFamily: {
+        scripture: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+      },
+      backgroundImage: {
+        'gradient-warm': 'var(--gradient-warm)',
+        'gradient-gold': 'var(--gradient-gold)',
+      },
+      boxShadow: {
+        soft: 'var(--shadow-soft)',
+        elegant: 'var(--shadow-elegant)',
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
