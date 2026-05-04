@@ -70,7 +70,7 @@ const Search = () => {
         {hits.map((h, i) => (
           <li key={i}>
             <Link
-              to={`/read/${encodeURIComponent(h.book)}/${h.chapter}`}
+              to={`/read/${encodeURIComponent(h.book)}/${h.chapter}?q=${encodeURIComponent(q.trim())}&v=${h.verse}`}
               className="block rounded-xl border border-border bg-card p-3 shadow-soft transition-colors hover:border-primary/40"
             >
               <p className="text-xs font-semibold uppercase tracking-wider text-primary">

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AppShell } from '@/components/AppShell';
 import { PageHeader } from '@/components/PageHeader';
 import { useScriptures } from '@/hooks/use-scriptures';
@@ -7,14 +7,20 @@ import { useTheme } from '@/components/theme-provider';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { ChevronLeft, ChevronRight, Minus, Plus, List } from 'lucide-react';
 
+const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 const Read = () => {
   const { book = '', chapter = '1' } = useParams();
   const chapterNum = Math.max(1, parseInt(chapter, 10) || 1);
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const query = (params.get('q') ?? '').trim();
+  const targetVerse = parseInt(params.get('v') ?? '', 10);
   const { data, loading, error } = useScriptures();
   const { fontSize, setFontSize } = useTheme();
   const [, setLast] = useLocalStorage('hs-last-read', { book: 'Genesis', chapter: 1 });
   const [pickerOpen, setPickerOpen] = useState(false);
+  const verseRefs = useRef<Record<number, HTMLSpanElement | null>>({});
 
   const bookObj = useMemo(
     () => data?.books.find((b) => b.name === book) ?? null,
@@ -23,8 +29,41 @@ const Read = () => {
 
   useEffect(() => {
     if (bookObj) setLast({ book: bookObj.name, chapter: chapterNum });
-    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
   }, [bookObj, chapterNum, setLast]);
+
+  useEffect(() => {
+    if (!bookObj) return;
+    if (Number.isFinite(targetVerse) && targetVerse > 0) {
+      const el = verseRefs.current[targetVerse];
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+    }
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+  }, [bookObj, chapterNum, targetVerse]);
+
+  const highlightRe = useMemo(
+    () => (query.length >= 2 ? new RegExp(`(${escapeRegExp(query)})`, 'ig') : null),
+    [query],
+  );
+
+  const renderVerse = (text: string) => {
+    if (!highlightRe) return text;
+    const parts = text.split(highlightRe);
+    return parts.map((p, i) =>
+      i % 2 === 1 ? (
+        <mark
+          key={i}
+          className="rounded bg-accent/40 px-0.5 text-accent-foreground"
+        >
+          {p}
+        </mark>
+      ) : (
+        <span key={i}>{p}</span>
+      ),
+    );
+  };
 
   const verses = bookObj?.chapters[chapterNum - 1] ?? [];
   const totalChapters = bookObj?.chapters.length ?? 0;
@@ -111,12 +150,24 @@ const Read = () => {
             Chapter {chapterNum}
           </h2>
           <div>
-            {verses.map((v, i) => (
-              <span key={i}>
-                <sup className="verse-num">{i + 1}</sup>
-                {v}{' '}
-              </span>
-            ))}
+            {verses.map((v, i) => {
+              const num = i + 1;
+              const isTarget = num === targetVerse;
+              return (
+                <span
+                  key={i}
+                  ref={(el) => (verseRefs.current[num] = el)}
+                  className={
+                    isTarget
+                      ? 'rounded-md bg-accent/15 px-1 py-0.5 ring-1 ring-accent/40'
+                      : undefined
+                  }
+                >
+                  <sup className="verse-num">{num}</sup>
+                  {renderVerse(v)}{' '}
+                </span>
+              );
+            })}
           </div>
 
           <div className="mt-10 flex items-center justify-between border-t border-border pt-5">
