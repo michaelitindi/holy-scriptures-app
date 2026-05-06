@@ -12,7 +12,7 @@ export type SearchIndex = {
 };
 
 const INDEX_KEY = 'search-index-v2';
-const INDEX_VERSION = 2;
+const INDEX_VERSION = 3;
 
 const STOPWORDS = new Set([
   'the','and','of','to','in','that','he','for','i','his','a','they','be','is','with','it','not','him','as','their','my','was','but','shall','from','thou','thy','thee','ye','this','have','will','are','all','which','unto','said','them','were','me','one','our','then','so','if','by','on','at','an','or','we','no','what','when','out','up','your','also','do','who','these','o','her','she','than','its','am','any','may','more','some','can','into','because','therefore','yet','even','now',
