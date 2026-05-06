@@ -1,41 +1,31 @@
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AppShell } from '@/components/AppShell';
 import { PageHeader } from '@/components/PageHeader';
 import { useScriptures } from '@/hooks/use-scriptures';
+import { useSearchIndex } from '@/hooks/use-search-index';
+import { searchIndex } from '@/lib/search-index';
 import { Search as SearchIcon } from 'lucide-react';
-
-type Hit = { book: string; chapter: number; verse: number; text: string };
 
 const Search = () => {
   const { data, loading } = useScriptures();
+  const { index, building } = useSearchIndex(data);
   const [q, setQ] = useState('');
+  const deferredQ = useDeferredValue(q);
 
-  const hits = useMemo<Hit[]>(() => {
-    const term = q.trim().toLowerCase();
-    if (!data || term.length < 3) return [];
-    const out: Hit[] = [];
-    outer: for (const b of data.books) {
-      for (let ci = 0; ci < b.chapters.length; ci++) {
-        const ch = b.chapters[ci];
-        for (let vi = 0; vi < ch.length; vi++) {
-          const t = ch[vi];
-          if (t.toLowerCase().includes(term)) {
-            out.push({ book: b.name, chapter: ci + 1, verse: vi + 1, text: t });
-            if (out.length >= 200) break outer;
-          }
-        }
-      }
-    }
-    return out;
-  }, [data, q]);
+  const hits = useMemo(() => {
+    const term = deferredQ.trim();
+    if (!data || !index || term.length < 3) return [];
+    return searchIndex(index, data, term, 200);
+  }, [data, index, deferredQ]);
 
   const highlight = (t: string) => {
-    if (q.trim().length < 3) return t;
-    const re = new RegExp(`(${q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'ig');
+    const term = deferredQ.trim();
+    if (term.length < 3) return t;
+    const re = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'ig');
     const parts = t.split(re);
     return parts.map((p, i) =>
-      re.test(p) && i % 2 === 1 ? (
+      i % 2 === 1 ? (
         <mark key={i} className="rounded bg-accent/40 px-0.5 text-accent-foreground">
           {p}
         </mark>
@@ -44,6 +34,8 @@ const Search = () => {
       ),
     );
   };
+
+  const showStatus = !loading && deferredQ.trim().length >= 3;
 
   return (
     <AppShell header={<PageHeader title="Search" subtitle="Across all scriptures" back="/" />}>
@@ -59,10 +51,14 @@ const Search = () => {
         </div>
       </div>
 
-      {loading && <p className="pt-6 text-muted-foreground">Loading…</p>}
-      {!loading && q.trim().length >= 3 && (
+      {loading && <p className="pt-6 text-muted-foreground">Loading scriptures…</p>}
+      {!loading && building && !index && (
+        <p className="pt-6 text-muted-foreground">Preparing offline search index…</p>
+      )}
+      {showStatus && (
         <p className="px-1 pt-2 text-xs text-muted-foreground">
           {hits.length === 200 ? '200+' : hits.length} result{hits.length === 1 ? '' : 's'}
+          {index ? ' · offline' : ''}
         </p>
       )}
 
@@ -70,7 +66,7 @@ const Search = () => {
         {hits.map((h, i) => (
           <li key={i}>
             <Link
-              to={`/read/${encodeURIComponent(h.book)}/${h.chapter}?q=${encodeURIComponent(q.trim())}&v=${h.verse}`}
+              to={`/read/${encodeURIComponent(h.book)}/${h.chapter}?q=${encodeURIComponent(deferredQ.trim())}&v=${h.verse}`}
               className="block rounded-xl border border-border bg-card p-3 shadow-soft transition-colors hover:border-primary/40"
             >
               <p className="text-xs font-semibold uppercase tracking-wider text-primary">
