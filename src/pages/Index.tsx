@@ -15,10 +15,7 @@ const Reader = () => {
   return (
     <AppShell
       header={
-        <PageHeader
-          title="Holy Scriptures"
-          subtitle="KJV · Apocrypha · Jasher"
-        />
+        <PageHeader title="Holy Scriptures" />
       }
     >
       <section className="pt-8 pb-6">
@@ -43,36 +40,23 @@ const Reader = () => {
       {error && <p className="text-destructive">{error}</p>}
 
       {data && (
-        <section className="space-y-6 pb-6">
-          {(['Old Testament', 'Apocrypha', 'New Testament', 'Other Sacred Texts'] as const).map(
-            (section) => {
-              const books = data.books.filter((b) => b.section === section);
-              if (books.length === 0) return null;
-              return (
-                <div key={section}>
-                  <h3 className="mb-2 px-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                    {section}
-                  </h3>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {books.map((b) => (
-                      <button
-                        key={b.name}
-                        onClick={() => navigate(`/read/${encodeURIComponent(b.name)}/1`)}
-                        className="rounded-xl border border-border bg-card p-3 text-left shadow-soft transition-all hover:border-primary/40 hover:shadow-elegant"
-                      >
-                        <p className="font-scripture text-base font-semibold text-foreground leading-tight">
-                          {b.name}
-                        </p>
-                        <p className="mt-0.5 text-[11px] text-muted-foreground">
-                          {b.chapters.length} chapter{b.chapters.length === 1 ? '' : 's'}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              );
-            },
-          )}
+        <section className="pb-6">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {data.books.map((b) => (
+              <button
+                key={b.name}
+                onClick={() => navigate(`/read/${encodeURIComponent(b.name)}/1`)}
+                className="rounded-xl border border-border bg-card p-3 text-left shadow-soft transition-all hover:border-primary/40 hover:shadow-elegant"
+              >
+                <p className="font-scripture text-base font-semibold text-foreground leading-tight">
+                  {b.name}
+                </p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  {b.chapters.length} chapter{b.chapters.length === 1 ? '' : 's'}
+                </p>
+              </button>
+            ))}
+          </div>
         </section>
       )}
     </AppShell>
