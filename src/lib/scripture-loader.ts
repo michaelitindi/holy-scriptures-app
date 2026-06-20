@@ -4,29 +4,59 @@ import { idbGet, idbSet } from './idb';
 const SCRIPTURES_URL = '/data/scriptures.json';
 const CACHE_KEY = 'scriptures-cache-v1';
 
-let cache: Promise<Scriptures> | null = null;
+// Module-level in-memory cache so route changes within a session are instant.
+let memory: Scriptures | null = null;
+let inflight: Promise<Scriptures> | null = null;
+let revalidated = false;
 
-async function fetchAndCache(): Promise<Scriptures> {
-  const r = await fetch(SCRIPTURES_URL);
+async function fetchFresh(): Promise<Scriptures> {
+  const r = await fetch(SCRIPTURES_URL, { cache: 'no-cache' });
   if (!r.ok) throw new Error('Failed to load scriptures');
   const data = (await r.json()) as Scriptures;
-  // Persist for offline use.
+  memory = data;
   idbSet(CACHE_KEY, data);
   return data;
 }
 
+function revalidateInBackground() {
+  if (revalidated) return;
+  revalidated = true;
+  // Fire-and-forget; if it fails we keep using the cached copy.
+  fetchFresh().catch(() => {
+    revalidated = false;
+  });
+}
+
+/**
+ * Cache-first scripture loader.
+ * - In-memory hit: synchronous-feeling, instant.
+ * - IndexedDB hit: returns immediately, then revalidates from network in the background.
+ * - Cold start: fetches from network.
+ */
 export function loadScriptures(): Promise<Scriptures> {
-  if (!cache) {
-    cache = (async () => {
-      // Try network first; on failure fall back to cached copy.
-      try {
-        return await fetchAndCache();
-      } catch (err) {
-        const cached = await idbGet<Scriptures>(CACHE_KEY);
-        if (cached) return cached;
-        throw err;
-      }
-    })();
+  if (memory) {
+    revalidateInBackground();
+    return Promise.resolve(memory);
   }
-  return cache;
+  if (inflight) return inflight;
+
+  inflight = (async () => {
+    try {
+      const cached = await idbGet<Scriptures>(CACHE_KEY);
+      if (cached && cached.books?.length) {
+        memory = cached;
+        revalidateInBackground();
+        return cached;
+      }
+    } catch {
+      /* ignore and fall through to network */
+    }
+    return fetchFresh();
+  })();
+
+  // Clear inflight once settled so future calls use the memory cache path.
+  inflight.finally(() => {
+    inflight = null;
+  });
+  return inflight;
 }
