@@ -6,6 +6,7 @@ import { idbGet, idbSet } from './idb';
 // (chapters/verses comfortably fit; books also fit easily.)
 export type SearchIndex = {
   version: number;
+  contentHash: string;
   books: string[];
   // token -> Uint32Array of verse ids
   postings: Record<string, number[]>;
@@ -29,6 +30,37 @@ export function unpackId(id: number): { b: number; c: number; v: number } {
   return { b: id >>> 20, c: (id >>> 10) & 0x3ff, v: id & 0x3ff };
 }
 
+// Fast, non-cryptographic 32-bit string hash (FNV-1a variant).
+// Used only to detect when scripture content changes so we can rebuild
+// the search index automatically — no security properties required.
+export function computeContentHash(data: Scriptures): string {
+  let h1 = 0x811c9dc5 | 0;
+  let h2 = 0xdeadbeef | 0;
+  let totalVerses = 0;
+  for (let bi = 0; bi < data.books.length; bi++) {
+    const b = data.books[bi];
+    // Mix book name
+    for (let i = 0; i < b.name.length; i++) {
+      h1 ^= b.name.charCodeAt(i);
+      h1 = Math.imul(h1, 0x01000193);
+    }
+    for (let ci = 0; ci < b.chapters.length; ci++) {
+      const ch = b.chapters[ci];
+      for (let vi = 0; vi < ch.length; vi++) {
+        const text = ch[vi];
+        totalVerses++;
+        for (let i = 0; i < text.length; i++) {
+          h1 ^= text.charCodeAt(i);
+          h1 = Math.imul(h1, 0x01000193);
+          h2 = (h2 + text.charCodeAt(i)) | 0;
+          h2 = Math.imul(h2, 0x85ebca6b);
+        }
+      }
+    }
+  }
+  return `${(h1 >>> 0).toString(16)}-${(h2 >>> 0).toString(16)}-${totalVerses}`;
+}
+
 export function buildIndex(data: Scriptures): SearchIndex {
   const postings: Record<string, number[]> = {};
   data.books.forEach((book, bi) => {
@@ -47,6 +79,7 @@ export function buildIndex(data: Scriptures): SearchIndex {
   });
   return {
     version: INDEX_VERSION,
+    contentHash: computeContentHash(data),
     books: data.books.map((b) => b.name),
     postings,
   };
@@ -54,9 +87,11 @@ export function buildIndex(data: Scriptures): SearchIndex {
 
 export async function getOrBuildIndex(data: Scriptures): Promise<SearchIndex> {
   const cached = await idbGet<SearchIndex>(INDEX_KEY);
+  const hash = computeContentHash(data);
   if (
     cached &&
     cached.version === INDEX_VERSION &&
+    cached.contentHash === hash &&
     cached.books.length === data.books.length &&
     cached.books.every((n, i) => n === data.books[i].name)
   ) {
