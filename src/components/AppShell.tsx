@@ -6,7 +6,7 @@ export function AppShell({ children, header }: { children: ReactNode; header?: R
     <div className="min-h-screen bg-gradient-warm">
       {header}
       <main
-        className="mx-auto max-w-2xl px-4"
+        className="mx-auto max-w-4xl px-4"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}
       >
         {children}

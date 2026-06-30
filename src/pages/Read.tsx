@@ -9,6 +9,14 @@ import { ChevronLeft, ChevronRight, Minus, Plus, List } from 'lucide-react';
 
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+const displayBookName = (name: string): string => {
+  const parts = name.split(' ');
+  if (parts[0] === 'I') return `1 ${parts.slice(1).join(' ')}`;
+  if (parts[0] === 'II') return `2 ${parts.slice(1).join(' ')}`;
+  if (parts[0] === 'III') return `3 ${parts.slice(1).join(' ')}`;
+  return name;
+};
+
 const Read = () => {
   const { book = '', chapter = '1' } = useParams();
   const chapterNum = Math.max(1, parseInt(chapter, 10) || 1);
@@ -68,43 +76,37 @@ const Read = () => {
   const verses = bookObj?.chapters[chapterNum - 1] ?? [];
   const totalChapters = bookObj?.chapters.length ?? 0;
 
-  const go = (delta: number) => {
-    const next = chapterNum + delta;
-    if (next >= 1 && next <= totalChapters && bookObj)
+  const go = (dir: number) => {
+    const next = chapterNum + dir;
+    if (next >= 1 && next <= totalChapters && bookObj) {
       navigate(`/read/${encodeURIComponent(bookObj.name)}/${next}`);
+    }
   };
 
   return (
     <AppShell
       header={
         <PageHeader
-          title={bookObj?.name ?? book}
+          title={bookObj ? displayBookName(bookObj.name) : book}
           subtitle={bookObj ? `Chapter ${chapterNum} of ${totalChapters}` : undefined}
           back="/"
           right={
-            <>
+            <div className="flex items-center gap-1.5 select-none">
               <button
-                onClick={() => setFontSize(Math.max(14, fontSize - 1))}
-                className="rounded-full p-2 text-muted-foreground hover:bg-secondary"
-                aria-label="Decrease font size"
+                onClick={() => go(-1)}
+                disabled={chapterNum <= 1}
+                className="rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground hover:bg-secondary/80 disabled:opacity-40 transition-colors"
               >
-                <Minus className="h-4 w-4" />
+                Prev
               </button>
               <button
-                onClick={() => setFontSize(Math.min(28, fontSize + 1))}
-                className="rounded-full p-2 text-muted-foreground hover:bg-secondary"
-                aria-label="Increase font size"
+                onClick={() => go(1)}
+                disabled={chapterNum >= totalChapters}
+                className="rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground hover:bg-secondary/80 disabled:opacity-40 transition-colors"
               >
-                <Plus className="h-4 w-4" />
+                Next
               </button>
-              <button
-                onClick={() => setPickerOpen((v) => !v)}
-                className="rounded-full p-2 text-muted-foreground hover:bg-secondary"
-                aria-label="Choose chapter"
-              >
-                <List className="h-4 w-4" />
-              </button>
-            </>
+            </div>
           }
         />
       }
@@ -115,78 +117,51 @@ const Read = () => {
         <p className="pt-8 text-muted-foreground">Book not found.</p>
       )}
 
-      {pickerOpen && bookObj && (
-        <div className="my-4 rounded-xl border border-border bg-card p-3 shadow-soft">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Chapter
-          </p>
-          <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-8">
-            {Array.from({ length: totalChapters }, (_, i) => i + 1).map((n) => (
-              <button
-                key={n}
-                onClick={() => {
-                  setPickerOpen(false);
-                  navigate(`/read/${encodeURIComponent(bookObj.name)}/${n}`);
-                }}
-                className={`rounded-md py-2 text-sm font-medium transition-colors ${
-                  n === chapterNum
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-secondary text-secondary-foreground hover:bg-accent hover:text-accent-foreground'
-                }`}
-              >
-                {n}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {bookObj && (
-        <article
-          className="font-scripture pt-6 leading-[1.8] text-foreground"
-          style={{ fontSize: `${fontSize}px` }}
-        >
-          <h2 className="mb-4 text-center text-3xl font-semibold gold-text">
-            Chapter {chapterNum}
-          </h2>
-          <div>
-            {verses.map((v, i) => {
-              const num = i + 1;
-              const isTarget = num === targetVerse;
-              return (
-                <span
-                  key={i}
-                  ref={(el) => (verseRefs.current[num] = el)}
-                  className={
-                    isTarget
-                      ? 'rounded-md bg-accent/15 px-1 py-0.5 ring-1 ring-accent/40'
-                      : undefined
-                  }
-                >
-                  <sup className="verse-num">{num}</sup>
-                  {renderVerse(v)}{' '}
-                </span>
-              );
-            })}
-          </div>
+        <div className="w-full pt-6">
+          <article className="font-scripture pt-6 leading-[1.8] text-foreground" style={{ fontSize: `${fontSize}px` }}>
+            <h2 className="mb-4 text-center text-3xl font-semibold gold-text">
+              Chapter {chapterNum}
+            </h2>
+            <div className="select-text">
+              {verses.map((v, i) => {
+                const num = i + 1;
+                const isTarget = num === targetVerse;
+                return (
+                  <span
+                    key={i}
+                    ref={(el) => (verseRefs.current[num] = el)}
+                    className={
+                      isTarget
+                        ? 'rounded-md bg-accent/15 px-1 py-0.5 ring-1 ring-accent/40'
+                        : undefined
+                    }
+                  >
+                    <sup className="verse-num">{num}</sup>
+                    {renderVerse(v)}{' '}
+                  </span>
+                );
+              })}
+            </div>
 
-          <div className="mt-10 flex items-center justify-between border-t border-border pt-5">
-            <button
-              onClick={() => go(-1)}
-              disabled={chapterNum <= 1}
-              className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground disabled:opacity-40"
-            >
-              <ChevronLeft className="h-4 w-4" /> Previous
-            </button>
-            <button
-              onClick={() => go(1)}
-              disabled={chapterNum >= totalChapters}
-              className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-40"
-            >
-              Next <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        </article>
+            <div className="mt-10 flex items-center justify-between border-t border-border pt-5 select-none">
+              <button
+                onClick={() => go(-1)}
+                disabled={chapterNum <= 1}
+                className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground disabled:opacity-40"
+              >
+                <ChevronLeft className="h-4 w-4" /> Previous
+              </button>
+              <button
+                onClick={() => go(1)}
+                disabled={chapterNum >= totalChapters}
+                className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-40"
+              >
+                Next <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </article>
+        </div>
       )}
     </AppShell>
   );

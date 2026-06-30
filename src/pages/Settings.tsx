@@ -59,17 +59,6 @@ const Settings = () => {
             earth.
           </p>
         </section>
-
-        <section className="rounded-xl border border-border bg-card p-4 shadow-soft">
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            About
-          </h2>
-          <p className="font-scripture text-base text-foreground">Holy Scriptures</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            King James Version with the Apocrypha (KJVA) and the Book of Jasher (1840 translation).
-            Public domain texts.
-          </p>
-        </section>
       </div>
     </AppShell>
   );
