@@ -75,10 +75,11 @@ const Read = () => {
 
   const verses = bookObj?.chapters[chapterNum - 1] ?? [];
   const totalChapters = bookObj?.chapters.length ?? 0;
+  const firstChapter = bookObj?.name === 'Additions to Esther' ? 10 : 1;
 
   const go = (dir: number) => {
     const next = chapterNum + dir;
-    if (next >= 1 && next <= totalChapters && bookObj) {
+    if (next >= firstChapter && next <= totalChapters && bookObj) {
       navigate(`/read/${encodeURIComponent(bookObj.name)}/${next}`);
     }
   };
@@ -88,13 +89,19 @@ const Read = () => {
       header={
         <PageHeader
           title={bookObj ? displayBookName(bookObj.name) : book}
-          subtitle={bookObj ? `Chapter ${chapterNum} of ${totalChapters}` : undefined}
+          subtitle={
+            bookObj 
+              ? bookObj.name === 'Additions to Esther'
+                ? `Chapter ${chapterNum} of 10-16`
+                : `Chapter ${chapterNum} of ${totalChapters}` 
+              : undefined
+          }
           back="/"
           right={
             <div className="flex items-center gap-1.5 select-none">
               <button
                 onClick={() => go(-1)}
-                disabled={chapterNum <= 1}
+                disabled={chapterNum <= firstChapter}
                 className="rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground hover:bg-secondary/80 disabled:opacity-40 transition-colors"
               >
                 Prev
@@ -147,7 +154,7 @@ const Read = () => {
             <div className="mt-10 flex items-center justify-between border-t border-border pt-5 select-none">
               <button
                 onClick={() => go(-1)}
-                disabled={chapterNum <= 1}
+                disabled={chapterNum <= firstChapter}
                 className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground disabled:opacity-40"
               >
                 <ChevronLeft className="h-4 w-4" /> Previous

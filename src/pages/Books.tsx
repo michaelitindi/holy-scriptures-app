@@ -44,6 +44,7 @@ const Books = () => {
           <div className="grid grid-cols-5 gap-2 sm:grid-cols-8">
             {bookObj.chapters.map((_, idx) => {
               const chNum = idx + 1;
+              if (bookObj.name === 'Additions to Esther' && chNum < 10) return null;
               return (
                 <button
                   key={chNum}
