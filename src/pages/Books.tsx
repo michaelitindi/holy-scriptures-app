@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppShell } from '@/components/AppShell';
 import { PageHeader } from '@/components/PageHeader';
 import { useScriptures } from '@/hooks/use-scriptures';
@@ -14,8 +13,9 @@ const displayBookName = (name: string): string => {
 
 const Books = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedBook = searchParams.get('book');
   const { data, loading, error } = useScriptures();
-  const [selectedBook, setSelectedBook] = useState<string | null>(null);
 
   const bookObj = selectedBook ? data?.books.find(b => b.name === selectedBook) : null;
 
@@ -26,7 +26,7 @@ const Books = () => {
           title={selectedBook ? displayBookName(selectedBook) : "All Books"} 
           subtitle={selectedBook ? undefined : "Browse every book"} 
           back={selectedBook ? "#" : "/"} 
-          onBackClick={selectedBook ? () => setSelectedBook(null) : undefined}
+          onBackClick={selectedBook ? () => setSearchParams({}) : undefined}
         />
       }
     >
@@ -65,7 +65,7 @@ const Books = () => {
             {data.books.map((b, i) => (
               <li key={b.name} className={i > 0 ? 'border-t border-border' : ''}>
                 <button
-                  onClick={() => setSelectedBook(b.name)}
+                  onClick={() => setSearchParams({ book: b.name })}
                   className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-secondary"
                 >
                   <span className="font-scripture text-lg text-foreground">{displayBookName(b.name)}</span>

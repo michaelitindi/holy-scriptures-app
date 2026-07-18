@@ -1,11 +1,9 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppShell } from '@/components/AppShell';
 import { PageHeader } from '@/components/PageHeader';
 import { useScriptures } from '@/hooks/use-scriptures';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { ChevronRight } from 'lucide-react';
-
-import { useState } from 'react';
 
 type LastRead = { book: string; chapter: number };
 
@@ -19,9 +17,10 @@ const displayBookName = (name: string): string => {
 
 const Reader = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedBook = searchParams.get('book');
   const { data, loading, error } = useScriptures();
   const [last] = useLocalStorage<LastRead>('hs-last-read', { book: 'Genesis', chapter: 1 });
-  const [selectedBook, setSelectedBook] = useState<string | null>(null);
 
   const bookObj = selectedBook ? data?.books.find(b => b.name === selectedBook) : null;
 
@@ -34,7 +33,7 @@ const Reader = () => {
           {...(selectedBook ? {
             title: displayBookName(selectedBook),
             back: "#",
-            onBackClick: () => setSelectedBook(null)
+            onBackClick: () => setSearchParams({})
           } : {})}
         />
       }
@@ -95,7 +94,7 @@ const Reader = () => {
             {data.books.map((b) => (
               <button
                 key={b.name}
-                onClick={() => setSelectedBook(b.name)}
+                onClick={() => setSearchParams({ book: b.name })}
                 className="rounded-xl border border-border bg-card p-3 text-left shadow-soft transition-all hover:border-primary/40 hover:shadow-elegant"
               >
                 <p className="font-scripture text-base font-semibold text-foreground leading-tight">
