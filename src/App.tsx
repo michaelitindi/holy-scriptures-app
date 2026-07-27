@@ -39,29 +39,13 @@ const AppContent = () => {
 
       // 2. If inside read chapter view (e.g. /read/Genesis/1), navigate back to the books catalog selection context
       if (path.startsWith("/read/")) {
-        // Find if we came from /books or / (Read tab)
-        // If the document referrer or history state doesn't specify, default to "/books" (or "/" depending on entry)
-        // We go back to books grid catalog list to pick chapters. Let's inspect routing context.
-        // If we want to show the chapter list of that book, we can redirect back to /books (or /) with selected book parameter
-        // To do this cleanly, we redirect to the tab they came from. Since Books tab is /books and Read tab is /:
-        // Let's redirect to /books to browse book chapters.
-        // Actually, we can check if they came from books. Let's redirect to /books as a safe, predictable fallback,
-        // or check window.history.state to see if there is history.
-        // Let's extract the book name from route: e.g. /read/Genesis/1 -> Genesis
         const routeParts = path.split("/");
         const bookName = routeParts[2] ? decodeURIComponent(routeParts[2]) : "";
         if (bookName) {
-          // Navigate to Books list with the book pre-selected
-          window.location.href = `/books?book=${encodeURIComponent(bookName)}`;
+          window.location.href = `/?book=${encodeURIComponent(bookName)}`;
         } else {
-          window.location.href = "/books";
+          window.location.href = "/";
         }
-        return;
-      }
-
-      // 3. If in /books but a book is preselected (e.g., /books?book=Genesis), go back to /books list
-      if (path === "/books" && window.location.search.includes("book=")) {
-        window.location.href = "/books";
         return;
       }
 
@@ -71,8 +55,8 @@ const AppContent = () => {
         return;
       }
 
-      // 5. If we are on one of the other top-level tab screens (Books, Search, Settings), go to the main Read tab (/)
-      if (path === "/books" || path === "/search" || path === "/settings") {
+      // 5. If we are on one of the other top-level tab screens (Search, Settings), go to the main Read tab (/)
+      if (path === "/search" || path === "/settings" || path === "/books") {
         window.location.href = "/";
         return;
       }
@@ -95,7 +79,6 @@ const AppContent = () => {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Index />} />
-        <Route path="/books" element={<Books />} />
         <Route path="/read/:book/:chapter" element={<Read />} />
         <Route path="/search" element={<Search />} />
         <Route path="/settings" element={<Settings />} />

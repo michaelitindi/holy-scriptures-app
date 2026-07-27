@@ -96,7 +96,7 @@ const Read = () => {
                 : `Chapter ${chapterNum} of ${totalChapters}` 
               : undefined
           }
-          back={bookObj ? `/books?book=${encodeURIComponent(bookObj.name)}` : '/books'}
+          back={bookObj ? `/?book=${encodeURIComponent(bookObj.name)}` : '/'}
           right={
             <div className="flex items-center gap-1.5 select-none">
               <button

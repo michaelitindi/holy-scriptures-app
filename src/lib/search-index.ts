@@ -139,7 +139,7 @@ export function searchIndex(
 
   const out: SearchHit[] = [];
   // Verify with full phrase match (for multi-word/punctuation accuracy).
-  if (candidates) {
+  if (candidates && candidates.length > 0) {
     for (const id of candidates) {
       const { b, c, v } = unpackId(id);
       const text = data.books[b]?.chapters[c]?.[v];
@@ -149,7 +149,7 @@ export function searchIndex(
         if (out.length >= limit) break;
       }
     }
-    return out;
+    if (out.length > 0) return out;
   }
 
   // Fallback substring scan for very short queries.

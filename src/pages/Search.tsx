@@ -1,4 +1,4 @@
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AppShell } from '@/components/AppShell';
 import { PageHeader } from '@/components/PageHeader';
@@ -11,14 +11,12 @@ const Search = () => {
   const { data, loading } = useScriptures();
   const { index, building } = useSearchIndex(data);
   const [q, setQ] = useState('');
-  const deferredQ = useDeferredValue(q);
 
   const hits = useMemo(() => {
-    const term = deferredQ.trim();
+    const term = q.trim();
     if (!data || term.length < 3) return [];
 
     // Parse citation reference: e.g., "Gen 1:1" or "Genesis 1" or "1 John 3:16"
-    // Regex matches: (Book Name with numbers/spaces) (Chapter Number) [optional: (separator) (Verse Number)]
     const refRegex = /^(\d?\s*[a-zA-Z\s\.\-]+?)\s*(\d+)(?:\s*[\:\s]\s*(\d+))?$/;
     const match = term.match(refRegex);
 
@@ -27,8 +25,6 @@ const Search = () => {
       const chapter = parseInt(match[2], 10);
       const verse = match[3] ? parseInt(match[3], 10) : null;
 
-      // Find best matching book name
-      // Genesis matches gen, genesis, etc. 1 John matches 1jn, 1john, etc.
       const book = data.books.find((b) => {
         const normName = b.name.toLowerCase().replace(/[\s\.]/g, '');
         return normName.startsWith(bookQuery) || normName.includes(bookQuery);
@@ -46,7 +42,6 @@ const Search = () => {
             }];
           }
         } else {
-          // If no verse specified, return all verses of that chapter
           return chVerses.map((vText, idx) => ({
             book: book.name,
             chapter,
@@ -57,13 +52,31 @@ const Search = () => {
       }
     }
 
-    // Fallback to standard tokenized search index
-    if (!index) return [];
+    // If index isn't ready or built yet, perform an immediate in-memory substring scan.
+    // This makes sure searches are extremely comprehensive and return results right away.
+    if (!index) {
+      const fallbackHits: any[] = [];
+      const lowerQuery = term.toLowerCase();
+      outerFallback: for (let bi = 0; bi < data.books.length; bi++) {
+        const b = data.books[bi];
+        for (let ci = 0; ci < b.chapters.length; ci++) {
+          const ch = b.chapters[ci];
+          for (let vi = 0; vi < ch.length; vi++) {
+            if (ch[vi].toLowerCase().includes(lowerQuery)) {
+              fallbackHits.push({ book: b.name, chapter: ci + 1, verse: vi + 1, text: ch[vi] });
+              if (fallbackHits.length >= 200) break outerFallback;
+            }
+          }
+        }
+      }
+      return fallbackHits;
+    }
+
     return searchIndex(index, data, term, 200);
-  }, [data, index, deferredQ]);
+  }, [data, index, q]);
 
   const highlight = (t: string) => {
-    const term = deferredQ.trim();
+    const term = q.trim();
     if (term.length < 3) return t;
     
     // If it's a citation query, we don't highlight generic chapter/verse numbers
@@ -84,7 +97,7 @@ const Search = () => {
     );
   };
 
-  const showStatus = !loading && deferredQ.trim().length >= 3;
+  const showStatus = !loading && q.trim().length >= 3;
 
   return (
     <AppShell header={<PageHeader title="Search" subtitle="Across all scriptures" back="/" />}>

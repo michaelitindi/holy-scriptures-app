@@ -1,9 +1,10 @@
+import { useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppShell } from '@/components/AppShell';
 import { PageHeader } from '@/components/PageHeader';
 import { useScriptures } from '@/hooks/use-scriptures';
 import { useLocalStorage } from '@/hooks/use-local-storage';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Search as SearchIcon, X } from 'lucide-react';
 
 type LastRead = { book: string; chapter: number };
 
@@ -21,26 +22,70 @@ const Reader = () => {
   const selectedBook = searchParams.get('book');
   const { data, loading, error } = useScriptures();
   const [last] = useLocalStorage<LastRead>('hs-last-read', { book: 'Genesis', chapter: 1 });
+  const [bookSearchQuery, setBookSearchQuery] = useState('');
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
 
   const bookObj = selectedBook ? data?.books.find(b => b.name === selectedBook) : null;
+
+  const filteredBooks = useMemo(() => {
+    if (!data) return [];
+    const query = bookSearchQuery.trim().toLowerCase();
+    if (!query) return data.books;
+    return data.books.filter(b => 
+      b.name.toLowerCase().includes(query) || 
+      displayBookName(b.name).toLowerCase().includes(query)
+    );
+  }, [data, bookSearchQuery]);
 
   return (
     <AppShell
       header={
         <PageHeader 
           title="Holy Scriptures" 
-          // If a book is selected, handle the header title and add a back button to reset selection
           {...(selectedBook ? {
             title: displayBookName(selectedBook),
             back: "#",
             onBackClick: () => setSearchParams({})
-          } : {})}
+          } : {
+            right: (
+              <button
+                onClick={() => {
+                  setIsSearchVisible(!isSearchVisible);
+                  if (isSearchVisible) setBookSearchQuery('');
+                }}
+                className="rounded-full p-2 text-muted-foreground hover:bg-secondary hover:text-foreground transition-all duration-150"
+              >
+                {isSearchVisible ? <X className="h-5 w-5" /> : <SearchIcon className="h-5 w-5" />}
+              </button>
+            )
+          })}
         />
       }
     >
 
+      {!selectedBook && isSearchVisible && (
+        <div className="relative mt-4 px-1 animate-fade-in">
+          <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={bookSearchQuery}
+            onChange={(e) => setBookSearchQuery(e.target.value)}
+            placeholder="Search for book..."
+            autoFocus
+            className="w-full rounded-full border border-border bg-card py-2.5 pl-10 pr-10 text-sm text-foreground shadow-soft outline-none focus:border-primary transition-all"
+          />
+          {bookSearchQuery && (
+            <button
+              onClick={() => setBookSearchQuery('')}
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      )}
+
       {!selectedBook && (
-        <section className="pt-8 pb-6">
+        <section className="pt-6 pb-6">
           <div className="rounded-2xl bg-card p-6 shadow-elegant">
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               Continue reading
@@ -90,22 +135,26 @@ const Reader = () => {
       {data && !selectedBook && (
         <section className="pb-6">
           <h3 className="font-scripture text-xl font-semibold text-foreground mb-4">Books</h3>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {data.books.map((b) => (
-              <button
-                key={b.name}
-                onClick={() => setSearchParams({ book: b.name })}
-                className="rounded-xl border border-border bg-card p-3 text-left shadow-soft transition-all hover:border-primary/40 hover:shadow-elegant"
-              >
-                <p className="font-scripture text-base font-semibold text-foreground leading-tight">
-                  {displayBookName(b.name)}
-                </p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  {b.chapters.length} chapter{b.chapters.length === 1 ? '' : 's'}
-                </p>
-              </button>
-            ))}
-          </div>
+          {filteredBooks.length === 0 ? (
+            <p className="text-sm text-muted-foreground pt-2">No matching books found.</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {filteredBooks.map((b) => (
+                <button
+                  key={b.name}
+                  onClick={() => setSearchParams({ book: b.name })}
+                  className="rounded-xl border border-border bg-card p-3 text-left shadow-soft transition-all hover:border-primary/40 hover:shadow-elegant"
+                >
+                  <p className="font-scripture text-base font-semibold text-foreground leading-tight">
+                    {displayBookName(b.name)}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    {b.chapters.length} chapter{b.chapters.length === 1 ? '' : 's'}
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
         </section>
       )}
     </AppShell>

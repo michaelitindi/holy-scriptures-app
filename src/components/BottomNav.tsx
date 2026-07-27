@@ -1,11 +1,10 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Book, Search, Settings, BookOpen } from 'lucide-react';
+import { Search, Settings, BookOpen } from 'lucide-react';
 
 export function BottomNav() {
   const location = useLocation();
   const items = [
     { to: '/', label: 'Read', icon: BookOpen },
-    { to: '/books', label: 'Books', icon: Book },
     { to: '/search', label: 'Search', icon: Search },
     { to: '/settings', label: 'Settings', icon: Settings },
   ];
