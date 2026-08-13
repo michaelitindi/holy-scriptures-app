@@ -138,13 +138,15 @@ export function searchIndex(
   }
 
   const out: SearchHit[] = [];
-  // Verify with full phrase match (for multi-word/punctuation accuracy).
+  // Verify with full phrase match (ignoring punctuation and extra spaces).
   if (candidates && candidates.length > 0) {
+    const cleanTerm = term.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "").replace(/\s+/g, " ");
     for (const id of candidates) {
       const { b, c, v } = unpackId(id);
       const text = data.books[b]?.chapters[c]?.[v];
       if (!text) continue;
-      if (text.toLowerCase().includes(term)) {
+      const cleanText = text.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "").replace(/\s+/g, " ");
+      if (cleanText.includes(cleanTerm)) {
         out.push({ book: data.books[b].name, chapter: c + 1, verse: v + 1, text });
         if (out.length >= limit) break;
       }
