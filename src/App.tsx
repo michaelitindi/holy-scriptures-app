@@ -12,6 +12,7 @@ import Index from "./pages/Index.tsx";
 import Books from "./pages/Books.tsx";
 import Read from "./pages/Read.tsx";
 import Search from "./pages/Search.tsx";
+import Saved from "./pages/Saved.tsx";
 import Settings from "./pages/Settings.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -55,8 +56,8 @@ const AppContent = () => {
         return;
       }
 
-      // 5. If we are on one of the other top-level tab screens (Search, Settings), go to the main Read tab (/)
-      if (path === "/search" || path === "/settings" || path === "/books") {
+      // 5. If we are on one of the other top-level tab screens (Search, Saved, Settings), go to the main Read tab (/)
+      if (path === "/search" || path === "/saved" || path === "/settings" || path === "/books") {
         window.location.href = "/";
         return;
       }
@@ -81,6 +82,7 @@ const AppContent = () => {
         <Route path="/" element={<Index />} />
         <Route path="/read/:book/:chapter" element={<Read />} />
         <Route path="/search" element={<Search />} />
+        <Route path="/saved" element={<Saved />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

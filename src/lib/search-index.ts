@@ -125,20 +125,32 @@ export function searchIndex(
   let candidates: number[] | null = null;
 
   if (tokens.length > 0) {
-    const lists = tokens
-      .map((t) => index.postings[t])
-      .filter((l): l is number[] => Array.isArray(l) && l.length > 0);
-    if (lists.length !== tokens.length) return [];
-    lists.sort((a, b) => a.length - b.length);
-    candidates = lists[0];
-    for (let i = 1; i < lists.length && candidates.length > 0; i++) {
-      const set = new Set(lists[i]);
-      candidates = candidates.filter((id) => set.has(id));
+    // Collect all lists for tokens that actually exist in the index
+    const listsWithTokens = tokens
+      .map((t) => ({ token: t, list: index.postings[t] }))
+      .filter((item): item is { token: string; list: number[] } => Array.isArray(item.list) && item.list.length > 0);
+
+    if (listsWithTokens.length > 0) {
+      // Score candidates by how many of the query tokens they match
+      const counts = new Map<number, number>();
+      for (const { list } of listsWithTokens) {
+        for (const id of list) {
+          counts.set(id, (counts.get(id) || 0) + 1);
+        }
+      }
+
+      // We prefer candidates matching more tokens.
+      // If we have multiple tokens, require matching at least 50% of the query tokens to be a candidate.
+      const minMatch = Math.max(1, Math.floor(tokens.length * 0.5));
+      candidates = Array.from(counts.entries())
+        .filter(([_, count]) => count >= minMatch)
+        .sort((a, b) => b[1] - a[1]) // Sort by highest match count first
+        .map(([id]) => id);
     }
   }
 
   const out: SearchHit[] = [];
-  // Verify with full phrase match (ignoring punctuation and extra spaces).
+  // Verify and rank hits
   if (candidates && candidates.length > 0) {
     const cleanTerm = term.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "").replace(/\s+/g, " ");
     for (const id of candidates) {
@@ -146,11 +158,29 @@ export function searchIndex(
       const text = data.books[b]?.chapters[c]?.[v];
       if (!text) continue;
       const cleanText = text.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "").replace(/\s+/g, " ");
+      
+      // If the exact normalized phrase is found, it gets top priority
       if (cleanText.includes(cleanTerm)) {
         out.push({ book: data.books[b].name, chapter: c + 1, verse: v + 1, text });
         if (out.length >= limit) break;
       }
     }
+
+    // If we didn't fill the limit with exact phrase matches, fill the rest with the best keyword matches
+    if (out.length < limit) {
+      const seen = new Set(out.map(h => `${h.book}-${h.chapter}-${h.verse}`));
+      for (const id of candidates) {
+        const { b, c, v } = unpackId(id);
+        const key = `${data.books[b]?.name}-${c + 1}-${v + 1}`;
+        if (seen.has(key)) continue;
+        const text = data.books[b]?.chapters[c]?.[v];
+        if (!text) continue;
+        
+        out.push({ book: data.books[b].name, chapter: c + 1, verse: v + 1, text });
+        if (out.length >= limit) break;
+      }
+    }
+    
     if (out.length > 0) return out;
   }
 

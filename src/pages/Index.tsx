@@ -25,7 +25,9 @@ const Reader = () => {
   const [bookSearchQuery, setBookSearchQuery] = useState('');
   const [isSearchVisible, setIsSearchVisible] = useState(false);
 
-  const bookObj = selectedBook ? data?.books.find(b => b.name === selectedBook) : null;
+  const selectedChapter = searchParams.get('chapter');
+  const selectedChapterNum = selectedChapter ? parseInt(selectedChapter, 10) : null;
+  const bookObj = selectedBook ? data?.books.find((b) => b.name === selectedBook) ?? null : null;
 
   const filteredBooks = useMemo(() => {
     if (!data) return [];
@@ -43,9 +45,16 @@ const Reader = () => {
         <PageHeader 
           title="Holy Scriptures" 
           {...(selectedBook ? {
-            title: displayBookName(selectedBook),
-            back: "#",
-            onBackClick: () => setSearchParams({})
+            title: displayBookName(selectedBook) + (selectedChapter ? ` ${selectedChapter}` : ''),
+            subtitle: selectedChapter ? 'Select Verse' : 'Select Chapter',
+            back: '#',
+            onBackClick: () => {
+              if (selectedChapter) {
+                setSearchParams({ book: selectedBook });
+              } else {
+                setSearchParams({});
+              }
+            }
           } : {})}
         />
       }
@@ -76,26 +85,54 @@ const Reader = () => {
 
       {selectedBook && bookObj && (
         <section className="pb-6 pt-6">
-          <div className="flex items-center justify-between mb-4 border-b border-border/40 pb-2">
-            <h3 className="font-scripture text-2xl font-semibold text-foreground">
-              Chapters
-            </h3>
-          </div>
-          <div className="grid grid-cols-5 gap-2 sm:grid-cols-8">
-            {bookObj.chapters.map((_, idx) => {
-              const chNum = idx + 1;
-              if (bookObj.name === 'Additions to Esther' && chNum < 10) return null;
-              return (
-                <button
-                  key={chNum}
-                  onClick={() => navigate(`/read/${encodeURIComponent(bookObj.name)}/${chNum}`)}
-                  className="rounded-lg bg-card border border-border p-3 text-center font-semibold text-sm hover:border-primary/40 hover:bg-secondary transition-all"
-                >
-                  {chNum}
-                </button>
-              );
-            })}
-          </div>
+          {selectedChapterNum ? (
+            // Render Verses Selection
+            <div key={`verses-view-${bookObj.name}-${selectedChapterNum}`}>
+              <div className="flex items-center justify-between mb-4 border-b border-border/40 pb-2">
+                <h3 className="font-scripture text-2xl font-semibold text-foreground">
+                  Verses
+                </h3>
+              </div>
+              <div key={`verses-grid-${bookObj.name}-${selectedChapterNum}`} className="grid grid-cols-5 gap-2 sm:grid-cols-8">
+                {Array.from({ length: bookObj.chapters[selectedChapterNum - 1]?.length || 0 }).map((_, idx) => {
+                  const vNum = idx + 1;
+                  return (
+                    <button
+                      key={`verse-btn-${vNum}`}
+                      onClick={() => navigate(`/read/${encodeURIComponent(bookObj.name)}/${selectedChapterNum}?goto=${vNum}`)}
+                      className="rounded-lg bg-card border border-border p-3 text-center font-semibold text-sm hover:border-primary/40 hover:bg-secondary active:scale-95 transition-all"
+                    >
+                      {vNum}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            // Render Chapters Selection
+            <div key={`chapters-view-${bookObj.name}`}>
+              <div className="flex items-center justify-between mb-4 border-b border-border/40 pb-2">
+                <h3 className="font-scripture text-2xl font-semibold text-foreground">
+                  Chapters
+                </h3>
+              </div>
+              <div key={`chapters-grid-${bookObj.name}`} className="grid grid-cols-5 gap-2 sm:grid-cols-8">
+                {bookObj.chapters.map((_, idx) => {
+                  const chNum = idx + 1;
+                  if (bookObj.name === 'Additions to Esther' && chNum < 10) return null;
+                  return (
+                    <button
+                      key={`chapter-btn-${chNum}`}
+                      onClick={() => setSearchParams({ book: selectedBook, chapter: String(chNum) })}
+                      className="rounded-lg bg-card border border-border p-3 text-center font-semibold text-sm hover:border-primary/40 hover:bg-secondary active:scale-95 transition-all"
+                    >
+                      {chNum}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </section>
       )}
 
@@ -140,7 +177,7 @@ const Reader = () => {
                 <button
                   key={b.name}
                   onClick={() => setSearchParams({ book: b.name })}
-                  className="rounded-xl border border-border bg-card p-3 text-left shadow-soft transition-all hover:border-primary/40 hover:shadow-elegant"
+                  className="rounded-xl border border-border bg-card p-3 text-left shadow-soft transition-all hover:border-primary/40 hover:shadow-elegant active:scale-[0.98]"
                 >
                   <p className="font-scripture text-base font-semibold text-foreground leading-tight">
                     {displayBookName(b.name)}

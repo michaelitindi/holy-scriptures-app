@@ -7,6 +7,25 @@ import { useSearchIndex } from '@/hooks/use-search-index';
 import { searchIndex } from '@/lib/search-index';
 import { Search as SearchIcon } from 'lucide-react';
 
+// Maps Roman-numeral prefixes used in our data to Arabic numbers (and vice-versa).
+const ROMAN_TO_ARABIC: Record<string, string> = { 'i': '1', 'ii': '2', 'iii': '3' };
+const ARABIC_TO_ROMAN: Record<string, string> = { '1': 'I', '2': 'II', '3': 'III' };
+
+/** Convert a stored book name like "I Samuel" to "1 Samuel" for display. */
+function displayBookName(name: string): string {
+  return name.replace(/^(I{1,3})\s+/, (_, roman) => {
+    const arabic = ROMAN_TO_ARABIC[roman.toLowerCase()];
+    return arabic ? `${arabic} ` : `${roman} `;
+  });
+}
+
+/** Given a user query like "1 sam" produce variants that also cover Roman-numeral prefixes. */
+function bookQueryVariants(raw: string): string[] {
+  const norm = raw.toLowerCase().replace(/[\s.]/g, '');
+  const romanised = norm.replace(/^(\d)/, (_, d) => (ARABIC_TO_ROMAN[d] ?? d).toLowerCase());
+  return Array.from(new Set([norm, romanised]));
+}
+
 const Search = () => {
   const { data, loading } = useScriptures();
   const { index, building } = useSearchIndex(data);
@@ -21,13 +40,13 @@ const Search = () => {
     const match = term.match(refRegex);
 
     if (match) {
-      const bookQuery = match[1].toLowerCase().replace(/[\s\.]/g, '');
+      const variants = bookQueryVariants(match[1]);
       const chapter = parseInt(match[2], 10);
       const verse = match[3] ? parseInt(match[3], 10) : null;
 
       const book = data.books.find((b) => {
-        const normName = b.name.toLowerCase().replace(/[\s\.]/g, '');
-        return normName.startsWith(bookQuery) || normName.includes(bookQuery);
+        const normName = b.name.toLowerCase().replace(/[\s.]/g, '');
+        return variants.some((v) => normName.startsWith(v) || normName.includes(v));
       });
 
       if (book && chapter >= 1 && chapter <= book.chapters.length) {
@@ -129,7 +148,7 @@ const Search = () => {
           <li key={i} className="rounded-xl border border-border bg-card p-4 shadow-soft">
             <div className="flex items-center justify-between gap-3 border-b border-border/60 pb-2">
               <p className="text-sm font-semibold uppercase tracking-wider text-primary">
-                {h.book} {h.chapter}:{h.verse}
+                {displayBookName(h.book)} {h.chapter}:{h.verse}
               </p>
               <Link
                 to={`/read/${encodeURIComponent(h.book)}/${h.chapter}?v=${h.verse}`}
