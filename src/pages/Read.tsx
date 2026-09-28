@@ -72,19 +72,13 @@ const Read = () => {
     if (bookObj) setLast({ book: bookObj.name, chapter: chapterNum });
   }, [bookObj, chapterNum, setLast]);
 
-  const [flashingVerse, setFlashingVerse] = useState<number | null>(null);
-
   useEffect(() => {
     if (!bookObj) return;
     if (Number.isFinite(scrollVerse) && scrollVerse > 0) {
       const el = verseRefs.current[scrollVerse];
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        setFlashingVerse(scrollVerse);
-        const timer = setTimeout(() => {
-          setFlashingVerse(null);
-        }, 2500);
-        return () => clearTimeout(timer);
+        return;
       }
     }
     window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
@@ -200,7 +194,7 @@ const Read = () => {
             <div className="select-text">
               {verses.map((v, i) => {
                 const num = i + 1;
-                const isFlashing = num === flashingVerse;
+                const isTarget = num === scrollVerse;
                 const isSelected = num === selectedVerse;
                 const key = `${bookObj.name}-${chapterNum}-${num}`;
                 const hasBookmark = !!bookmarks[key];
@@ -210,10 +204,10 @@ const Read = () => {
                     key={i}
                     ref={(el) => (verseRefs.current[num] = el)}
                     onClick={() => setSelectedVerse(num)}
-                    className={`inline cursor-pointer rounded px-1 py-0.5 active:scale-[0.99] hover:bg-secondary/40 ${
-                      isFlashing
-                        ? 'bg-amber-500/25 dark:bg-amber-400/30 ring-1 ring-amber-500/50 font-medium transition-all duration-300'
-                        : 'transition-all duration-1000'
+                    className={`inline cursor-pointer rounded px-1 py-0.5 transition-all duration-150 active:scale-[0.99] hover:bg-secondary/40 ${
+                      isTarget
+                        ? 'bg-amber-500/25 dark:bg-amber-400/30 ring-1 ring-amber-500/50 font-medium'
+                        : ''
                     } ${
                       isSelected ? 'bg-primary/10 ring-1 ring-primary/30 font-medium' : ''
                     } ${
