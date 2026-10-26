@@ -33,7 +33,7 @@ const Read = () => {
   const { fontSize } = useTheme();
   const [, setLast] = useLocalStorage('hs-last-read', { book: 'Genesis', chapter: 1 });
 
-  const verseRefs = useRef<Record<number, HTMLSpanElement | null>>({});
+  const verseRefs = useRef<Record<number, HTMLElement | null>>({});
 
   const bookObj = useMemo(
     () => data?.books.find((b) => b.name === book) ?? null,
@@ -122,7 +122,7 @@ const Read = () => {
   );
 
   const renderVerse = (text: string) => {
-    if (!highlightRe) return text;
+    if (!highlightRe || bookObj?.name === 'Prayer of Manasses') return text;
     const parts = text.split(highlightRe);
     return parts.map((p, i) =>
       i % 2 === 1 ? (
@@ -191,20 +191,20 @@ const Read = () => {
             <h2 className="mb-4 text-center text-3xl font-semibold gold-text">
               Chapter {chapterNum}
             </h2>
-            <div className="select-text">
+            <div className="select-text space-y-3.5">
               {verses.map((v, i) => {
                 const num = i + 1;
-                const isTarget = num === scrollVerse;
+                const isTarget = bookObj?.name !== 'Prayer of Manasses' && num === scrollVerse;
                 const isSelected = num === selectedVerse;
                 const key = `${bookObj.name}-${chapterNum}-${num}`;
                 const hasBookmark = !!bookmarks[key];
                 const hasNote = !!notes[key];
                 return (
-                  <span
+                  <p
                     key={i}
                     ref={(el) => (verseRefs.current[num] = el)}
                     onClick={() => setSelectedVerse(num)}
-                    className={`inline cursor-pointer rounded px-1 py-0.5 transition-all duration-150 active:scale-[0.99] hover:bg-secondary/40 ${
+                    className={`cursor-pointer rounded-lg px-2.5 py-1.5 transition-all duration-150 active:scale-[0.99] hover:bg-secondary/40 leading-[1.8] ${
                       isTarget
                         ? 'bg-amber-500/25 dark:bg-amber-400/30 ring-1 ring-amber-500/50 font-medium'
                         : ''
@@ -220,8 +220,8 @@ const Read = () => {
                         <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary ml-0.5 -translate-y-1" />
                       )}
                     </sup>
-                    {renderVerse(v)}{' '}
-                  </span>
+                    {renderVerse(v)}
+                  </p>
                 );
               })}
             </div>
